@@ -221,7 +221,7 @@ async def help_handler(callback: CallbackQuery):
         "Bot to'xtatiladi. Balans to'ldirilgach qayta ishga tushadi.\n\n"
         "▪️ <b>Nechta bot yaratish mumkin?</b>\n"
         "Cheksiz — har biri uchun alohida 3,000 so'm/kun.\n\n"
-        "👨‍💻 Admin bilan bog'lanish: @admin_username"
+        "👨‍💻 Admin bilan bog'lanish: @Createrbot_admin"
     )
     await callback.message.edit_text(
         text,
@@ -380,7 +380,7 @@ async def reply_help(message: Message):
         "Bot to'xtatiladi. To'ldirilgach qayta ishga tushadi.\n\n"
         "▪️ <b>Nechta bot yaratish mumkin?</b>\n"
         "Cheksiz — har biri 3,000 so'm/kun.\n\n"
-        "👨‍💻 Admin: @admin_username",
+        "👨‍💻 Admin: @createrbot_admin",
         reply_markup=back_to_main_kb(),
         parse_mode="HTML"
     )
