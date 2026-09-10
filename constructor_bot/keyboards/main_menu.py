@@ -21,7 +21,7 @@ def main_menu_kb() -> ReplyKeyboardMarkup:
             ],
         ],
         resize_keyboard=True,
-        persistent=True,
+        is_persistent=True,
     )
 
 
