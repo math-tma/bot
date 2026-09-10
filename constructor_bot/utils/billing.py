@@ -149,21 +149,23 @@ async def process_daily_charges():
                     VALUES ($1, $2, $3)
                 """, user_id, bot_id, daily_price)
 
-                       else:
+            else:
                 # Balans yetarli emas — botni to'xtatish
                 await conn.execute("""
                     UPDATE bots SET is_running = FALSE
                     WHERE id = $1
                 """, bot_id)
 
-                from webhook.bot_manager import stop_template_bot   # ← YANGI QATOR
-                await stop_template_bot(bot_id)                     # ← YANGI QATOR
+                from webhook.bot_manager import stop_template_bot
+                await stop_template_bot(bot_id)
 
                 stopped_bots.append({
                     'user_id': user_id,
                     'bot_username': bot['bot_username'],
                     'bot_id': bot_id,
                 })
+
+        return stopped_bots
 
 
 async def reactivate_bots_if_balance(user_id: int):
@@ -177,7 +179,7 @@ async def reactivate_bots_if_balance(user_id: int):
             "SELECT balance FROM users WHERE user_id = $1", user_id
         )
 
-               # To'xtatilgan botlarni olish
+        # To'xtatilgan botlarni olish
         stopped_bots = await conn.fetch("""
             SELECT id, bot_token, bot_username, admin_id, template_type
             FROM bots
@@ -191,10 +193,12 @@ async def reactivate_bots_if_balance(user_id: int):
                     UPDATE bots SET is_running = TRUE WHERE id = $1
                 """, bot['id'])
 
-                from webhook.bot_manager import start_template_bot   # ← YANGI QATOR
-                await start_template_bot(dict(bot))                  # ← YANGI QATOR
+                from webhook.bot_manager import start_template_bot
+                await start_template_bot(dict(bot))
 
                 reactivated.append(dict(bot))
+
+        return reactivated
 
 
 async def get_payment_history(user_id: int, limit: int = 10) -> list:
