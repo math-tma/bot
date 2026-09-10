@@ -17,7 +17,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 # ═══════════════════════════════════════
 # WEBHOOK
 # ═══════════════════════════════════════
-WEBHOOK_HOST = os.getenv("WEBHOOK_HOST")
+WEBHOOK_HOST = (os.getenv("WEBHOOK_HOST") or "").strip().rstrip("/")
 WEBHOOK_PORT = int(os.getenv("WEBHOOK_PORT", 8000))
 WEBHOOK_PATH = f"/webhook/constructor"
 WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
