@@ -149,20 +149,21 @@ async def process_daily_charges():
                     VALUES ($1, $2, $3)
                 """, user_id, bot_id, daily_price)
 
-            else:
+                       else:
                 # Balans yetarli emas — botni to'xtatish
                 await conn.execute("""
                     UPDATE bots SET is_running = FALSE
                     WHERE id = $1
                 """, bot_id)
 
+                from webhook.bot_manager import stop_template_bot   # ← YANGI QATOR
+                await stop_template_bot(bot_id)                     # ← YANGI QATOR
+
                 stopped_bots.append({
                     'user_id': user_id,
                     'bot_username': bot['bot_username'],
                     'bot_id': bot_id,
                 })
-
-        return stopped_bots
 
 
 async def reactivate_bots_if_balance(user_id: int):
