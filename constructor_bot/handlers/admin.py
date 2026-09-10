@@ -540,6 +540,42 @@ async def admin_bot_detail_handler(callback: CallbackQuery):
     await callback.answer()
 
 
+@router.callback_query(F.data.startswith("admin_start_bot_"))
+async def admin_start_bot_handler(callback: CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+    bot_id = int(callback.data.split("_")[-1])
+
+    async with database.pool.acquire() as conn:
+        bot_data = await conn.fetchrow("SELECT * FROM bots WHERE id = $1", bot_id)
+        if not bot_data:
+            await callback.answer("❌ Topilmadi!", show_alert=True)
+            return
+        await conn.execute("UPDATE bots SET is_running = TRUE WHERE id = $1", bot_id)
+
+    from webhook.bot_manager import start_template_bot
+    await start_template_bot(dict(bot_data))
+
+    await callback.answer("✅ Bot ishga tushirildi!", show_alert=True)
+    await admin_bot_detail_handler(callback)
+
+
+@router.callback_query(F.data.startswith("admin_stop_bot_"))
+async def admin_stop_bot_handler(callback: CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+    bot_id = int(callback.data.split("_")[-1])
+
+    async with database.pool.acquire() as conn:
+        await conn.execute("UPDATE bots SET is_running = FALSE WHERE id = $1", bot_id)
+
+    from webhook.bot_manager import stop_template_bot
+    await stop_template_bot(bot_id)
+
+    await callback.answer("⏹ Bot to'xtatildi!", show_alert=True)
+    await admin_bot_detail_handler(callback)
+
+
 @router.callback_query(F.data.startswith("admin_delete_bot_"))
 async def admin_delete_bot_handler(callback: CallbackQuery):
     if not is_admin(callback.from_user.id):
