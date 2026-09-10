@@ -100,7 +100,7 @@ async def main_menu_create_bot(message: Message, state: FSMContext):
     # 💡 Bu yerda shablonlar inline tugmalari chiqishi kerak. 
     # Hozircha namunaviy matn, o'zingizning inline keyboard funksiyangizni reply_markup'ga qo'ying:
     from keyboards.main_menu import template_select_kb
-await message.answer("🤖 Yaratgingiz kelgan bot shablonini tanlang:", reply_markup=template_select_kb())
+    await message.answer("🤖 Yaratgingiz kelgan bot shablonini tanlang:", reply_markup=template_select_kb())
 
 # ═══════════════════════════════════════
 # SHABLON TANLASH → YO'RIQNOMA
