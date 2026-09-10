@@ -285,7 +285,7 @@ async def reply_my_bots(message: Message):
         status = "✅" if bot['is_running'] else "⏸"
         buttons.append([InlineKeyboardButton(
             text=f"{status} {bot['bot_username']}",
-            callback_data=f"view_bot_{bot['id']}"
+            callback_data=f"bot_detail_{bot['id']}"  
         )])
     buttons.append([InlineKeyboardButton(text="◀️ Orqaga", callback_data="main_menu")])
     
