@@ -46,6 +46,7 @@ async def setup_constructor_bot():
     constructor_dp.include_router(admin_router)
 
     # Webhook sozlash
+    logger.info(f"🔎 WEBHOOK_URL (repr): {WEBHOOK_URL!r}")
     await constructor_bot.set_webhook(
         url=WEBHOOK_URL,
         drop_pending_updates=True
