@@ -150,7 +150,9 @@ async def bot_stop_handler(callback: CallbackQuery):
 # BOT O'CHIRISH
 # ═══════════════════════════════════════
 
-@router.callback_query(F.data.startswith("bot_delete_"))
+@router.callback_query(
+    F.data.startswith("bot_delete_") & ~F.data.startswith("bot_delete_confirm_")
+)
 async def bot_delete_confirm_handler(callback: CallbackQuery):
     bot_id = int(callback.data.split("_")[-1])
     await callback.message.edit_text(
