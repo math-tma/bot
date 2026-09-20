@@ -59,6 +59,17 @@ async def admin_panel(message: Message):
     )
 
 
+@router.message(F.text == "👨‍💻 Admin panel")
+async def admin_panel_button(message: Message):
+    if not is_admin(message.from_user.id):
+        return
+    await message.answer(
+        "👨‍💼 <b>Admin panel</b>",
+        reply_markup=admin_main_kb(),
+        parse_mode="HTML"
+    )
+
+
 @router.callback_query(F.data == "admin_main")
 async def admin_main_handler(callback: CallbackQuery, state: FSMContext):
     if not is_admin(callback.from_user.id):
