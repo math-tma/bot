@@ -3,6 +3,7 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from datetime import datetime, timedelta
+import logging
 
 import database
 from database import pool
@@ -10,6 +11,8 @@ from database import get_setting
 from keyboards.main_menu import main_menu_kb, subscription_check_kb, back_to_main_kb
 from utils.subscription import check_user_subscription
 from config import ADMIN_ID
+
+logger = logging.getLogger(__name__)
 
 router = Router()
 
@@ -73,11 +76,11 @@ async def set_referrer(referrer_id: int, new_user_id: int):
         """, referrer_id, new_user_id)
 
 
-async def grant_referral_bonus_if_eligible(user_id: int):
+async def grant_referral_bonus_if_eligible(user_id: int, bot: Bot = None):
     """
     Foydalanuvchi birinchi botini yaratganda chaqiriladi.
     Agar u referral orqali kelgan bo'lsa va hali bonus berilmagan
-    bo'lsa — shu yerda referrer'ga bonus beriladi.
+    bo'lsa — shu yerda referrer'ga bonus beriladi va unga xabar yuboriladi.
     """
     async with pool.acquire() as conn:
         already_rewarded = await conn.fetchval(
@@ -109,6 +112,20 @@ async def grant_referral_bonus_if_eligible(user_id: int):
             INSERT INTO referrals (referrer_id, referred_id, bonus_amount)
             VALUES ($1, $2, $3)
         """, referrer_id, user_id, bonus)
+
+    # Referrer'ga xabar yuborish (agar bot instance berilgan bo'lsa)
+    if bot:
+        try:
+            await bot.send_message(
+                referrer_id,
+                f"🎉 <b>Referal bonus!</b>\n\n"
+                f"Taklif qilgan do'stingiz shartlarni bajardi "
+                f"(birinchi botini yaratdi) va sizga "
+                f"<b>{bonus:,} so'm</b> hisobingizga o'tkazildi!".replace(",", " "),
+                parse_mode="HTML"
+            )
+        except Exception as e:
+            logger.error(f"Referrer {referrer_id}ga xabar yuborishda xato: {e}")
 
 
 async def send_main_menu(target, user: dict, state: FSMContext = None):
