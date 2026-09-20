@@ -2,6 +2,9 @@ from aiogram import Bot
 from aiogram.enums import ChatMemberStatus
 import database
 from database import pool
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 async def get_required_channels() -> list:
@@ -39,8 +42,11 @@ async def check_user_subscription(bot: Bot, user_id: int) -> tuple[bool, list]:
                 ChatMemberStatus.BANNED,
             ]:
                 not_subscribed.append(channel)
-        except Exception:
-            # Kanal topilmasa yoki bot admin emas — o'tkazib yuborish
+        except Exception as e:
+            logger.warning(
+                f"Kanal tekshirishda xato (channel_id={channel['channel_id']}, "
+                f"user_id={user_id}): {e}"
+            )
             not_subscribed.append(channel)
 
     return len(not_subscribed) == 0, not_subscribed
@@ -76,7 +82,11 @@ async def check_bot_subscription(bot: Bot, user_id: int, bot_id: int) -> tuple[b
                 ChatMemberStatus.BANNED,
             ]:
                 not_subscribed.append(channel)
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"Kanal tekshirishda xato (channel_id={channel['channel_id']}, "
+                f"user_id={user_id}): {e}"
+            )
             not_subscribed.append(channel)
 
     return len(not_subscribed) == 0, not_subscribed
