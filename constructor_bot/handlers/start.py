@@ -1,4 +1,3 @@
-from aiogram.exceptions import TelegramBadRequest
 from aiogram import Router, F, Bot
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart, Command
@@ -48,8 +47,12 @@ async def get_referral_from_args(args: str) -> int | None:
     return None
 
 
-async def apply_referral_bonus(referrer_id: int, new_user_id: int):
-    """Referral bonus berish"""
+async def set_referrer(referrer_id: int, new_user_id: int):
+    """
+    /start bosilganda faqat referrer'ni belgilab qo'yamiz.
+    Bonus BERILMAYDI — bonus faqat foydalanuvchi birinchi botini
+    yaratganda beriladi (qarang: grant_referral_bonus_if_eligible).
+    """
     if referrer_id == new_user_id:
         return
 
@@ -58,18 +61,44 @@ async def apply_referral_bonus(referrer_id: int, new_user_id: int):
         return
 
     async with pool.acquire() as conn:
-        exists = await conn.fetchval("""
-            SELECT id FROM referrals WHERE referred_id = $1
-        """, new_user_id)
-        if exists:
-            return
-
         referrer = await conn.fetchrow(
             "SELECT user_id FROM users WHERE user_id = $1", referrer_id
         )
         if not referrer:
             return
 
+        await conn.execute("""
+            UPDATE users SET referred_by = $1
+            WHERE user_id = $2 AND referred_by IS NULL
+        """, referrer_id, new_user_id)
+
+
+async def grant_referral_bonus_if_eligible(user_id: int):
+    """
+    Foydalanuvchi birinchi botini yaratganda chaqiriladi.
+    Agar u referral orqali kelgan bo'lsa va hali bonus berilmagan
+    bo'lsa — shu yerda referrer'ga bonus beriladi.
+    """
+    async with pool.acquire() as conn:
+        already_rewarded = await conn.fetchval(
+            "SELECT id FROM referrals WHERE referred_id = $1", user_id
+        )
+        if already_rewarded:
+            return
+
+        user = await conn.fetchrow(
+            "SELECT referred_by FROM users WHERE user_id = $1", user_id
+        )
+        if not user or not user['referred_by']:
+            return
+
+        bots_count = await conn.fetchval(
+            "SELECT COUNT(*) FROM bots WHERE user_id = $1", user_id
+        )
+        if bots_count != 1:
+            return  # Bu birinchi bot emas — bonus faqat birinchisida beriladi
+
+        referrer_id = user['referred_by']
         bonus = int(await get_setting('referral_bonus') or 5000)
 
         await conn.execute("""
@@ -79,11 +108,7 @@ async def apply_referral_bonus(referrer_id: int, new_user_id: int):
         await conn.execute("""
             INSERT INTO referrals (referrer_id, referred_id, bonus_amount)
             VALUES ($1, $2, $3)
-        """, referrer_id, new_user_id, bonus)
-
-        await conn.execute("""
-            UPDATE users SET referred_by = $1 WHERE user_id = $2
-        """, referrer_id, new_user_id)
+        """, referrer_id, user_id, bonus)
 
 
 async def send_main_menu(target, user: dict, state: FSMContext = None):
@@ -160,7 +185,7 @@ async def start_handler(message: Message, bot: Bot, state: FSMContext):
     user = await get_or_create_user(user_id, username, full_name)
 
     if is_new_user and referrer_id:
-        await apply_referral_bonus(referrer_id, user_id)
+        await set_referrer(referrer_id, user_id)
 
     await send_main_menu(message, user, state)
 
@@ -222,7 +247,7 @@ async def help_handler(callback: CallbackQuery):
         "Bot to'xtatiladi. Balans to'ldirilgach qayta ishga tushadi.\n\n"
         "▪️ <b>Nechta bot yaratish mumkin?</b>\n"
         "Cheksiz — har biri uchun alohida 3,000 so'm/kun.\n\n"
-        "👨‍💻 Admin bilan bog'lanish: @Createrbot_admin"
+        "👨‍💻 Admin bilan bog'lanish: @admin_username"
     )
     await callback.message.edit_text(
         text,
@@ -381,7 +406,7 @@ async def reply_help(message: Message):
         "Bot to'xtatiladi. To'ldirilgach qayta ishga tushadi.\n\n"
         "▪️ <b>Nechta bot yaratish mumkin?</b>\n"
         "Cheksiz — har biri 3,000 so'm/kun.\n\n"
-        "👨‍💻 Admin: @createrbot_admin",
+        "👨‍💻 Admin: @admin_username",
         reply_markup=back_to_main_kb(),
         parse_mode="HTML"
     )
