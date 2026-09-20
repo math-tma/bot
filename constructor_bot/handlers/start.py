@@ -240,13 +240,13 @@ async def help_handler(callback: CallbackQuery):
         "📞 <b>Yordam</b>\n\n"
         "❓ <b>Tez-tez so'raladigan savollar:</b>\n\n"
         "▪️ <b>Bot yaratish qancha turadi?</b>\n"
-        "Har bir bot uchun kuniga 3,000 so'm yechiladi.\n\n"
+        "Har bir bot uchun kuniga 1,000 so'm yechiladi.\n\n"
         "▪️ <b>Trial nima?</b>\n"
         "Birinchi 7 kun bepul — 1 ta bot yaratishingiz mumkin.\n\n"
         "▪️ <b>Balans tugasa nima bo'ladi?</b>\n"
         "Bot to'xtatiladi. Balans to'ldirilgach qayta ishga tushadi.\n\n"
         "▪️ <b>Nechta bot yaratish mumkin?</b>\n"
-        "Cheksiz — har biri uchun alohida 3,000 so'm/kun.\n\n"
+        "Cheksiz — har biri uchun alohida 1,000 so'm/kun.\n\n"
         "👨‍💻 Admin bilan bog'lanish: @Createrbot_admin"
     )
     await callback.message.edit_text(
@@ -399,13 +399,13 @@ async def reply_help(message: Message):
     await message.answer(
         "📞 <b>Yordam</b>\n\n"
         "▪️ <b>Bot yaratish qancha turadi?</b>\n"
-        "Har bir bot uchun kuniga 3,000 so'm.\n\n"
+        "Har bir bot uchun kuniga 1,000 so'm.\n\n"
         "▪️ <b>Trial nima?</b>\n"
         "Birinchi 7 kun bepul — 1 ta bot bepul.\n\n"
         "▪️ <b>Balans tugasa nima bo'ladi?</b>\n"
         "Bot to'xtatiladi. To'ldirilgach qayta ishga tushadi.\n\n"
         "▪️ <b>Nechta bot yaratish mumkin?</b>\n"
-        "Cheksiz — har biri 3,000 so'm/kun.\n\n"
+        "Cheksiz — har biri 1,000 so'm/kun.\n\n"
         "👨‍💻 Admin: @Createrbot_admin",
         reply_markup=back_to_main_kb(),
         parse_mode="HTML"
