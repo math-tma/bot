@@ -46,7 +46,6 @@ async def setup_constructor_bot():
     constructor_dp.include_router(admin_router)
 
     # Webhook sozlash
-    logger.info(f"🔎 WEBHOOK_URL (repr): {WEBHOOK_URL!r}")
     await constructor_bot.set_webhook(
         url=WEBHOOK_URL,
         drop_pending_updates=True
@@ -86,7 +85,10 @@ async def on_shutdown():
     await shutdown_all_bots()
 
     if constructor_bot:
-        await constructor_bot.delete_webhook()
+        # DIQQAT: delete_webhook() chaqirilmaydi — deploy/redeploy vaqtida
+        # buni chaqirish yangi jarayon o'rnatgan webhook'ni o'chirib
+        # yuborishi mumkin (race condition). Session shunchaki yopiladi,
+        # webhook Telegram'da saqlanib qoladi.
         await constructor_bot.session.close()
 
     await close_pool()
