@@ -824,11 +824,30 @@ async def channel_name_received(message: Message, state: FSMContext):
 
 
 @router.message(AdminStates.waiting_channel_url)
-async def channel_url_received(message: Message, state: FSMContext):
+async def channel_url_received(message: Message, state: FSMContext, bot: Bot):
     if not is_admin(message.from_user.id):
         return
     data = await state.get_data()
     await state.clear()
+
+    # Bot shu kanalda admin ekanligini oldindan tekshirish —
+    # aks holda obuna tekshiruvi hech qachon ishlamaydi
+    warning = ""
+    try:
+        me = await bot.get_chat_member(data['channel_id'], bot.id)
+        if me.status not in ("administrator", "creator"):
+            warning = (
+                "\n\n⚠️ <b>Diqqat!</b> Bot bu kanalda hali <b>admin</b> emas. "
+                "Botni kanalga administrator qilib qo'shmasangiz, "
+                "obuna tekshiruvi ishlamaydi!"
+            )
+    except Exception as e:
+        warning = (
+            f"\n\n⚠️ <b>Diqqat!</b> Kanalni tekshirib bo'lmadi: <code>{e}</code>\n"
+            "Kanal ID noto'g'ri bo'lishi yoki bot hali kanalga umuman "
+            "qo'shilmagan bo'lishi mumkin. Botni kanalga administrator "
+            "qilib qo'shing va ID'ni tekshiring."
+        )
 
     async with database.pool.acquire() as conn:
         await conn.execute("""
@@ -841,7 +860,8 @@ async def channel_url_received(message: Message, state: FSMContext):
     await message.answer(
         f"✅ Kanal qo'shildi!\n\n"
         f"📢 {data['channel_name']}\n"
-        f"🆔 {data['channel_id']}",
+        f"🆔 {data['channel_id']}"
+        f"{warning}",
         parse_mode="HTML"
     )
 
