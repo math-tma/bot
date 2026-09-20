@@ -13,11 +13,14 @@ def subscription_kb(channels: list) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def start_quiz_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
+def start_quiz_kb(is_admin: bool = False) -> InlineKeyboardMarkup:
+    keyboard = [
         [InlineKeyboardButton(text="🎯 Testni boshlash", callback_data="quiz_start")],
         [InlineKeyboardButton(text="🏆 Leaderboard", callback_data="quiz_leaderboard")],
-    ])
+    ]
+    if is_admin:
+        keyboard.append([InlineKeyboardButton(text="👨‍💻 Admin panel", callback_data="quiz_admin")])
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
 def answer_kb(question_index: int) -> InlineKeyboardMarkup:
