@@ -139,8 +139,33 @@ async def startup_all_bots():
     logger.info(f"✅ Barcha botlar ishga tushdi")
 
 
+async def close_bot_session(bot_id: int):
+    """
+    Server qayta ishga tushganda (deploy/redeploy) chaqiriladi.
+    DIQQAT: webhook'ni O'CHIRMAYDI — faqat aiohttp session'ni yopadi.
+    Webhook Telegram'da saqlanib qoladi, chunki yangi jarayon (process)
+    startup vaqtida uni qayta o'rnatadi. Agar bu yerda delete_webhook()
+    chaqirilsa, eski va yangi jarayon orasidagi race condition tufayli
+    yangi o'rnatilgan webhook o'chib ketishi mumkin.
+    """
+    if bot_id not in running_bots:
+        return
+
+    try:
+        bot_info = running_bots[bot_id]
+        bot: Bot = bot_info["bot"]
+        await bot.session.close()
+        del running_bots[bot_id]
+    except Exception as e:
+        logger.error(f"Bot #{bot_id} session yopishda xato: {e}")
+
+
 async def shutdown_all_bots():
-    """Barcha botlarni yopish"""
+    """
+    Server to'xtaganda (deploy/redeploy) chaqiriladi.
+    Botlarni TO'XTATMAYDI — faqat session'larni yopadi, webhook'lar
+    Telegram'da saqlanib qoladi.
+    """
     bot_ids = list(running_bots.keys())
     for bot_id in bot_ids:
-        await stop_template_bot(bot_id)
+        await close_bot_session(bot_id)
