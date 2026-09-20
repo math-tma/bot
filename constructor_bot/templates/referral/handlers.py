@@ -116,7 +116,7 @@ async def ref_start(message: Message, bot: Bot, state: FSMContext):
         if user['is_banned']:
             await message.answer("🚫 Siz bloklangansiz.")
             return
-        await show_main_menu(message, user)
+        await show_main_menu(message, user, is_admin=(row['admin_id'] == user_id))
         return
 
     # Yangi foydalanuvchi — referral tekshirish
@@ -226,7 +226,7 @@ async def ref_phone_received(message: Message, state: FSMContext, bot: Bot):
     await state.clear()
 
     user = await get_user(bot_id, user_id)
-    await show_main_menu(message, user, is_new=True)
+    await show_main_menu(message, user, is_new=True, is_admin=(row['admin_id'] == user_id))
 
 
 @router.message(RefStates.waiting_phone)
@@ -237,7 +237,7 @@ async def ref_phone_wrong(message: Message):
     )
 
 
-async def show_main_menu(target, user: dict, is_new: bool = False):
+async def show_main_menu(target, user: dict, is_new: bool = False, is_admin: bool = False):
     text = ""
     if is_new:
         text = "✅ <b>Ro'yxatdan o'tdingiz!</b>\n\n"
@@ -248,9 +248,9 @@ async def show_main_menu(target, user: dict, is_new: bool = False):
     )
 
     if isinstance(target, Message):
-        await target.answer(text, reply_markup=main_menu_kb(), parse_mode="HTML")
+        await target.answer(text, reply_markup=main_menu_kb(is_admin), parse_mode="HTML")
     elif isinstance(target, CallbackQuery):
-        await target.message.edit_text(text, reply_markup=main_menu_kb(), parse_mode="HTML")
+        await target.message.edit_text(text, reply_markup=main_menu_kb(is_admin), parse_mode="HTML")
 
 
 @router.callback_query(F.data == "ref_main")
@@ -261,7 +261,7 @@ async def ref_main_cb(callback: CallbackQuery, bot: Bot, state: FSMContext):
     if not user:
         await callback.answer()
         return
-    await show_main_menu(callback, user)
+    await show_main_menu(callback, user, is_admin=(row['admin_id'] == callback.from_user.id))
     await callback.answer()
 
 
