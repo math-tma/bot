@@ -22,14 +22,17 @@ def phone_kb() -> InlineKeyboardMarkup:
     )
 
 
-def main_menu_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
+def main_menu_kb(is_admin: bool = False) -> InlineKeyboardMarkup:
+    keyboard = [
         [InlineKeyboardButton(text="🔗 Referral havolam", callback_data="ref_link")],
         [InlineKeyboardButton(text="💰 Balans", callback_data="ref_balance")],
         [InlineKeyboardButton(text="🏆 Leaderboard", callback_data="ref_leaderboard")],
         [InlineKeyboardButton(text="💸 Pul yechish", callback_data="ref_withdraw")],
         [InlineKeyboardButton(text="ℹ️ Yordam", callback_data="ref_help")],
-    ])
+    ]
+    if is_admin:
+        keyboard.append([InlineKeyboardButton(text="👨‍💻 Admin panel", callback_data="ref_admin")])
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
 def withdraw_kb() -> InlineKeyboardMarkup:
