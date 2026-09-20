@@ -39,7 +39,6 @@ async def check_user_subscription(bot: Bot, user_id: int) -> tuple[bool, list]:
             if member.status in [
                 ChatMemberStatus.LEFT,
                 ChatMemberStatus.KICKED,
-                ChatMemberStatus.BANNED,
             ]:
                 not_subscribed.append(channel)
         except Exception as e:
@@ -79,7 +78,6 @@ async def check_bot_subscription(bot: Bot, user_id: int, bot_id: int) -> tuple[b
             if member.status in [
                 ChatMemberStatus.LEFT,
                 ChatMemberStatus.KICKED,
-                ChatMemberStatus.BANNED,
             ]:
                 not_subscribed.append(channel)
         except Exception as e:
