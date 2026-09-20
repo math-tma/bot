@@ -151,10 +151,12 @@ async def send_main_menu(target, user: dict, state: FSMContext = None):
         f"Quyidagi tugmalardan birini tanlang:"
     )
 
+    is_admin = user['user_id'] == ADMIN_ID
+
     if isinstance(target, Message):
-        await target.answer(text, reply_markup=main_menu_kb(), parse_mode="HTML")
+        await target.answer(text, reply_markup=main_menu_kb(is_admin), parse_mode="HTML")
     elif isinstance(target, CallbackQuery):
-        await target.message.answer(text, reply_markup=main_menu_kb(), parse_mode="HTML")
+        await target.message.answer(text, reply_markup=main_menu_kb(is_admin), parse_mode="HTML")
 
 
 # ═══════════════════════════════════════
