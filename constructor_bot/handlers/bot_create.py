@@ -231,7 +231,7 @@ async def admin_id_received(message: Message, state: FSMContext):
 # ═══════════════════════════════════════
 #  BotCreateStates.confirm cheklovi qo'shildi! Endi tugma 100% ishlaydi.
 @router.callback_query(F.data == "bot_create_confirm", BotCreateStates.confirm)
-async def bot_create_confirmed(callback: CallbackQuery, state: FSMContext):
+async def bot_create_confirmed(callback: CallbackQuery, state: FSMContext, bot: Bot):
     data = await state.get_data()
     user_id = callback.from_user.id
 
@@ -255,7 +255,7 @@ async def bot_create_confirmed(callback: CallbackQuery, state: FSMContext):
     # Agar bu foydalanuvchining birinchi boti bo'lsa va u referral
     # orqali kelgan bo'lsa — endi referrer'ga bonus beriladi
     from handlers.start import grant_referral_bonus_if_eligible
-    await grant_referral_bonus_if_eligible(user_id)
+    await grant_referral_bonus_if_eligible(user_id, bot)
 
     await state.clear()
 
