@@ -111,12 +111,13 @@ async def quiz_start(message: Message, bot: Bot, state: FSMContext):
         return
 
     settings = await get_settings(bot_id)
+    is_admin = await is_admin_user(bot, user_id)
     await message.answer(
         f"🎯 <b>Quiz Bot</b>\n\n"
         f"📝 Savollar soni: <b>{settings['questions_count']} ta</b>\n"
         f"⏱ Har savolga vaqt: <b>{settings['time_per_question']} soniya</b>\n\n"
         f"Testni boshlashga tayyormisiz?",
-        reply_markup=start_quiz_kb(),
+        reply_markup=start_quiz_kb(is_admin),
         parse_mode="HTML"
     )
 
@@ -132,12 +133,13 @@ async def quiz_check_sub(callback: CallbackQuery, bot: Bot):
         return
     await callback.answer("✅ Obuna tasdiqlandi!")
     settings = await get_settings(row['id'])
+    is_admin = await is_admin_user(bot, callback.from_user.id)
     await callback.message.edit_text(
         f"🎯 <b>Quiz Bot</b>\n\n"
         f"📝 Savollar soni: <b>{settings['questions_count']} ta</b>\n"
         f"⏱ Har savolga vaqt: <b>{settings['time_per_question']} soniya</b>\n\n"
         f"Testni boshlashga tayyormisiz?",
-        reply_markup=start_quiz_kb(),
+        reply_markup=start_quiz_kb(is_admin),
         parse_mode="HTML"
     )
 
