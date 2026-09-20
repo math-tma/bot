@@ -13,12 +13,15 @@ def subscription_kb(channels: list) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def main_menu_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
+def main_menu_kb(is_admin: bool = False) -> InlineKeyboardMarkup:
+    keyboard = [
         [InlineKeyboardButton(text="🛍️ Katalog", callback_data="shop_catalog")],
         [InlineKeyboardButton(text="🛒 Savatcha", callback_data="shop_cart")],
         [InlineKeyboardButton(text="📦 Buyurtmalarim", callback_data="shop_orders")],
-    ])
+    ]
+    if is_admin:
+        keyboard.append([InlineKeyboardButton(text="👨‍💻 Admin panel", callback_data="shop_admin")])
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
 def categories_kb(categories: list) -> InlineKeyboardMarkup:
