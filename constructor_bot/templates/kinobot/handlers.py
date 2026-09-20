@@ -4,6 +4,8 @@ from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
+import logging
+
 import database
 from database import pool
 from templates.kinobot.keyboards import (
@@ -11,6 +13,7 @@ from templates.kinobot.keyboards import (
 )
 
 router = Router()
+logger = logging.getLogger(__name__)
 
 
 class KinoStates(StatesGroup):
@@ -50,11 +53,14 @@ async def check_subscription(bot: Bot, user_id: int, bot_id: int) -> tuple[bool,
     not_subscribed = []
     for ch in channels:
         try:
-            from aiogram.types import ChatMemberStatus
             member = await bot.get_chat_member(ch['channel_id'], user_id)
-            if member.status in ['left', 'kicked', 'banned']:
+            if member.status in ['left', 'kicked']:
                 not_subscribed.append(dict(ch))
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"Kanal tekshirishda xato (channel_id={ch['channel_id']}, "
+                f"user_id={user_id}): {e}"
+            )
             not_subscribed.append(dict(ch))
 
     return len(not_subscribed) == 0, not_subscribed
@@ -115,10 +121,19 @@ async def kino_start(message: Message, bot: Bot):
         )
         return
 
+    is_admin = bot_row['admin_id'] == user_id
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    admin_kb = None
+    if is_admin:
+        admin_kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="👨‍💻 Admin panel", callback_data="kino_admin")]
+        ])
+
     await message.answer(
         "🎬 <b>Kino bot</b>\n\n"
         "Kino kodini yuboring va filmni oling!\n\n"
         "💡 Kino kodini kanalimizdan topishingiz mumkin.",
+        reply_markup=admin_kb,
         parse_mode="HTML"
     )
 
@@ -128,7 +143,7 @@ async def kino_check_sub(callback: CallbackQuery, bot: Bot):
     bot_info = await bot.get_me()
     async with database.pool.acquire() as conn:
         bot_row = await conn.fetchrow(
-            "SELECT id FROM bots WHERE bot_username = $1", bot_info.username
+            "SELECT id, admin_id FROM bots WHERE bot_username = $1", bot_info.username
         )
     if not bot_row:
         return
@@ -141,10 +156,20 @@ async def kino_check_sub(callback: CallbackQuery, bot: Bot):
         return
 
     await callback.answer("✅ Obuna tasdiqlandi!")
+
+    is_admin = bot_row['admin_id'] == callback.from_user.id
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    admin_kb = None
+    if is_admin:
+        admin_kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="👨‍💻 Admin panel", callback_data="kino_admin")]
+        ])
+
     await callback.message.edit_text(
         "🎬 <b>Kino bot</b>\n\n"
         "Kino kodini yuboring va filmni oling!\n\n"
         "💡 Kino kodini kanalimizdan topishingiz mumkin.",
+        reply_markup=admin_kb,
         parse_mode="HTML"
     )
 
