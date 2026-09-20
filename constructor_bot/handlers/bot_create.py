@@ -252,6 +252,11 @@ async def bot_create_confirmed(callback: CallbackQuery, state: FSMContext):
 
         await create_template_settings(conn, bot_id, data['template_type'])
 
+    # Agar bu foydalanuvchining birinchi boti bo'lsa va u referral
+    # orqali kelgan bo'lsa — endi referrer'ga bonus beriladi
+    from handlers.start import grant_referral_bonus_if_eligible
+    await grant_referral_bonus_if_eligible(user_id)
+
     await state.clear()
 
     bot_data = {
