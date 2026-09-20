@@ -105,10 +105,11 @@ async def shop_start(message: Message, bot: Bot):
         )
         return
 
+    is_admin = await is_admin_user(bot, user_id)
     await message.answer(
         "🛒 <b>Do'kon botiga xush kelibsiz!</b>\n\n"
         "Quyidagi bo'limlardan birini tanlang 👇",
-        reply_markup=main_menu_kb(),
+        reply_markup=main_menu_kb(is_admin),
         parse_mode="HTML"
     )
 
@@ -123,19 +124,21 @@ async def shop_check_sub(callback: CallbackQuery, bot: Bot):
         await callback.answer("❌ Hali obuna bo'lmadingiz!", show_alert=True)
         return
     await callback.answer("✅ Obuna tasdiqlandi!")
+    is_admin = await is_admin_user(bot, callback.from_user.id)
     await callback.message.edit_text(
         "🛒 <b>Do'kon botiga xush kelibsiz!</b>\n\nQuyidagi bo'limlardan birini tanlang 👇",
-        reply_markup=main_menu_kb(),
+        reply_markup=main_menu_kb(is_admin),
         parse_mode="HTML"
     )
 
 
 @router.callback_query(F.data == "shop_main")
-async def shop_main(callback: CallbackQuery, state: FSMContext):
+async def shop_main(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await state.clear()
+    is_admin = await is_admin_user(bot, callback.from_user.id)
     await callback.message.edit_text(
         "🛒 <b>Asosiy menyu</b>",
-        reply_markup=main_menu_kb(),
+        reply_markup=main_menu_kb(is_admin),
         parse_mode="HTML"
     )
     await callback.answer()
