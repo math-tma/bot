@@ -5,21 +5,27 @@ from aiogram.types import (
 
 
 def main_menu_kb(is_admin: bool = False) -> ReplyKeyboardMarkup:
-    """Asosiy menyu — Reply Keyboard (pastda doim ko'rinadi)"""
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [
-                KeyboardButton(text="🆕 Bot yaratish"),
-                KeyboardButton(text="📋 Mening botlarim"),
-            ],
-            [
-                KeyboardButton(text="💰 Balans"),
-                KeyboardButton(text="🔗 Do'st taklif qilish"),
-            ],
-            [
-                KeyboardButton(text="📞 Yordam"),
-            ],
+    """Asosiy menyu — Reply Keyboard"""
+    keyboard = [
+        [
+            KeyboardButton(text="🆕 Bot yaratish"),
+            KeyboardButton(text="📋 Mening botlarim"),
         ],
+        [
+            KeyboardButton(text="💰 Balans"),
+            KeyboardButton(text="🔗 Do'st taklif qilish"),
+        ],
+        [
+            KeyboardButton(text="📞 Yordam"),
+        ],
+    ]
+    
+    # Agar foydalanuvchi admin bo'lsa, Admin paneli tugmasini qo'shamiz:
+    if is_admin:
+        keyboard.append([KeyboardButton(text="⚙️ Admin panel")])
+
+    return ReplyKeyboardMarkup(
+        keyboard=keyboard,
         resize_keyboard=True,
         is_persistent=True,
     )
