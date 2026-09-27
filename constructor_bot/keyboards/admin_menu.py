@@ -7,6 +7,7 @@ def admin_main_kb() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="👥 Foydalanuvchilar", callback_data="admin_users")],
         [InlineKeyboardButton(text="💳 To'lovlar", callback_data="admin_payments")],
         [InlineKeyboardButton(text="🤖 Botlar", callback_data="admin_bots")],
+        [InlineKeyboardButton(text="💎 Tariflar (VIP)", callback_data="admin_tiers")],
         [InlineKeyboardButton(text="📣 Xabar yuborish", callback_data="admin_broadcast")],
         [InlineKeyboardButton(text="📊 Statistika", callback_data="admin_stats")],
         [InlineKeyboardButton(text="⚙️ Sozlamalar", callback_data="admin_settings")],
@@ -85,10 +86,31 @@ def admin_broadcast_kb() -> InlineKeyboardMarkup:
     ])
 
 
+def admin_tiers_kb(tiers: list) -> InlineKeyboardMarkup:
+    """Tariflar (VIP darajalar) ro'yxati"""
+    buttons = []
+    for t in tiers:
+        max_r = f"{t['max_requests']:,}" if t['max_requests'] else "∞"
+        buttons.append([InlineKeyboardButton(
+            text=f"{t['tier_name']} ({t['min_requests']:,}-{max_r}) — {t['daily_price']:,} so'm/kun",
+            callback_data=f"admin_tier_{t['id']}"
+        )])
+    buttons.append([InlineKeyboardButton(text="◀️ Orqaga", callback_data="admin_main")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def admin_tier_detail_kb(tier_id: int) -> InlineKeyboardMarkup:
+    """Bitta tarifni tahrirlash menyusi"""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💰 Narxni o'zgartirish", callback_data=f"admin_tier_price_{tier_id}")],
+        [InlineKeyboardButton(text="⚡ Concurrency limitni o'zgartirish", callback_data=f"admin_tier_limit_{tier_id}")],
+        [InlineKeyboardButton(text="◀️ Orqaga", callback_data="admin_tiers")],
+    ])
+
+
 def admin_settings_kb() -> InlineKeyboardMarkup:
     """Sozlamalar panel"""
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💰 Kunlik narx", callback_data="admin_set_daily_price")],
         [InlineKeyboardButton(text="🎁 Trial davomiyligi", callback_data="admin_set_trial_days")],
         [InlineKeyboardButton(text="🔗 Referral bonus", callback_data="admin_set_referral_bonus")],
         [InlineKeyboardButton(text="💳 To'lov karta", callback_data="admin_set_payment_card")],
