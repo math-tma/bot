@@ -4,7 +4,7 @@ from aiogram.types import (
 )
 
 
-def main_menu_kb() -> ReplyKeyboardMarkup:
+def main_menu_kb(is_admin: bool = False) -> ReplyKeyboardMarkup:
     """Asosiy menyu — Reply Keyboard (pastda doim ko'rinadi)"""
     return ReplyKeyboardMarkup(
         keyboard=[
