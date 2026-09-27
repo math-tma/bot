@@ -4,26 +4,22 @@ from aiogram.types import (
 )
 
 
-def main_menu_kb(is_admin: bool = False) -> ReplyKeyboardMarkup:
+def main_menu_kb() -> ReplyKeyboardMarkup:
     """Asosiy menyu — Reply Keyboard (pastda doim ko'rinadi)"""
-    keyboard = [
-        [
-            KeyboardButton(text="🆕 Bot yaratish"),
-            KeyboardButton(text="📋 Mening botlarim"),
-        ],
-        [
-            KeyboardButton(text="💰 Balans"),
-            KeyboardButton(text="🔗 Do'st taklif qilish"),
-        ],
-        [
-            KeyboardButton(text="📞 Yordam"),
-        ],
-    ]
-    if is_admin:
-        keyboard.append([KeyboardButton(text="👨‍💻 Admin panel")])
-
     return ReplyKeyboardMarkup(
-        keyboard=keyboard,
+        keyboard=[
+            [
+                KeyboardButton(text="🆕 Bot yaratish"),
+                KeyboardButton(text="📋 Mening botlarim"),
+            ],
+            [
+                KeyboardButton(text="💰 Balans"),
+                KeyboardButton(text="🔗 Do'st taklif qilish"),
+            ],
+            [
+                KeyboardButton(text="📞 Yordam"),
+            ],
+        ],
         resize_keyboard=True,
         is_persistent=True,
     )
@@ -70,6 +66,7 @@ def template_select_kb() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="📢 Avto xabar bot", callback_data="template_broadcaster")],
         [InlineKeyboardButton(text="👥 Referral bot", callback_data="template_referral")],
         [InlineKeyboardButton(text="🎬 Kino bot", callback_data="template_kinobot")],
+        [InlineKeyboardButton(text="🧠 AI Agent bot", callback_data="template_ai_agent")],
         [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="main_menu")],
     ])
 
