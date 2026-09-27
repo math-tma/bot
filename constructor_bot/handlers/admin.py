@@ -12,7 +12,7 @@ from keyboards.admin_menu import (
     admin_main_kb, admin_users_kb, admin_user_action_kb,
     admin_payments_kb, admin_payment_action_kb, admin_bots_kb,
     admin_bot_action_kb, admin_broadcast_kb, admin_settings_kb,
-    admin_channels_kb, admin_back_kb
+    admin_channels_kb, admin_back_kb, admin_tiers_kb, admin_tier_detail_kb
 )
 from keyboards.main_menu import back_to_main_kb
 from utils.billing import add_balance, reactivate_bots_if_balance
@@ -38,6 +38,9 @@ class AdminStates(StatesGroup):
     waiting_add_balance_amount = State()
     # Foydalanuvchi qidirish
     waiting_search_user = State()
+    # Tariflar (VIP darajalar)
+    waiting_tier_price = State()
+    waiting_tier_limit = State()
 
 
 def is_admin(user_id: int) -> bool:
@@ -50,17 +53,6 @@ def is_admin(user_id: int) -> bool:
 
 @router.message(Command("admin"))
 async def admin_panel(message: Message):
-    if not is_admin(message.from_user.id):
-        return
-    await message.answer(
-        "👨‍💼 <b>Admin panel</b>",
-        reply_markup=admin_main_kb(),
-        parse_mode="HTML"
-    )
-
-
-@router.message(F.text == "👨‍💻 Admin panel")
-async def admin_panel_button(message: Message):
     if not is_admin(message.from_user.id):
         return
     await message.answer(
@@ -657,6 +649,141 @@ async def admin_broadcast_send(message: Message, state: FSMContext, bot: Bot):
 
 
 # ═══════════════════════════════════════
+# TARIFLAR (VIP DARAJALAR)
+# ═══════════════════════════════════════
+
+@router.callback_query(F.data == "admin_tiers")
+async def admin_tiers_handler(callback: CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+
+    async with database.pool.acquire() as conn:
+        tiers = await conn.fetch(
+            "SELECT * FROM pricing_tiers ORDER BY sort_order ASC"
+        )
+
+    await callback.message.edit_text(
+        "💎 <b>Tariflar (VIP darajalar)</b>\n\n"
+        "Har bir bot kechagi so'rovlar soniga qarab avtomatik "
+        "tegishli tarifga o'tkaziladi.\n\n"
+        "Tahrirlash uchun tarifni tanlang:",
+        reply_markup=admin_tiers_kb([dict(t) for t in tiers]),
+        parse_mode="HTML"
+    )
+
+
+@router.callback_query(F.data.startswith("admin_tier_") & ~F.data.startswith("admin_tier_price_") & ~F.data.startswith("admin_tier_limit_"))
+async def admin_tier_detail_handler(callback: CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+    tier_id = int(callback.data.split("_")[-1])
+
+    async with database.pool.acquire() as conn:
+        tier = await conn.fetchrow(
+            "SELECT * FROM pricing_tiers WHERE id = $1", tier_id
+        )
+    if not tier:
+        await callback.answer("❌ Topilmadi!", show_alert=True)
+        return
+
+    max_r = f"{tier['max_requests']:,}" if tier['max_requests'] else "∞"
+    await callback.message.edit_text(
+        f"💎 <b>{tier['tier_name']}</b>\n\n"
+        f"📊 So'rovlar: {tier['min_requests']:,} — {max_r} /kun\n"
+        f"💰 Narx: <b>{tier['daily_price']:,} so'm/kun</b>\n"
+        f"⚡ Concurrency limit: <b>{tier['max_concurrent']}</b>\n\n"
+        f"(Concurrency limit — bu bot bir vaqtning o'zida nechta "
+        f"so'rovni parallel qayta ishlashi mumkinligi.)",
+        reply_markup=admin_tier_detail_kb(tier_id),
+        parse_mode="HTML"
+    )
+
+
+@router.callback_query(F.data.startswith("admin_tier_price_"))
+async def admin_tier_price_start(callback: CallbackQuery, state: FSMContext):
+    if not is_admin(callback.from_user.id):
+        return
+    tier_id = int(callback.data.split("_")[-1])
+    await state.update_data(tier_id=tier_id)
+    await state.set_state(AdminStates.waiting_tier_price)
+    await callback.message.edit_text(
+        "💰 Yangi kunlik narxni kiriting (so'mda, faqat raqam):"
+    )
+
+
+@router.message(AdminStates.waiting_tier_price)
+async def admin_tier_price_received(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        return
+    if not message.text.strip().isdigit():
+        await message.answer("❌ Faqat raqam kiriting!")
+        return
+
+    data = await state.get_data()
+    tier_id = data['tier_id']
+    new_price = int(message.text.strip())
+
+    async with database.pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE pricing_tiers SET daily_price = $1 WHERE id = $2",
+            new_price, tier_id
+        )
+        tier = await conn.fetchrow(
+            "SELECT * FROM pricing_tiers WHERE id = $1", tier_id
+        )
+
+    await state.clear()
+    await message.answer(
+        f"✅ <b>{tier['tier_name']}</b> tarifi narxi "
+        f"<b>{new_price:,} so'm/kun</b> qilib yangilandi!",
+        reply_markup=admin_tier_detail_kb(tier_id),
+        parse_mode="HTML"
+    )
+
+
+@router.callback_query(F.data.startswith("admin_tier_limit_"))
+async def admin_tier_limit_start(callback: CallbackQuery, state: FSMContext):
+    if not is_admin(callback.from_user.id):
+        return
+    tier_id = int(callback.data.split("_")[-1])
+    await state.update_data(tier_id=tier_id)
+    await state.set_state(AdminStates.waiting_tier_limit)
+    await callback.message.edit_text(
+        "⚡ Yangi concurrency limitni kiriting (masalan 10, 20, 80):"
+    )
+
+
+@router.message(AdminStates.waiting_tier_limit)
+async def admin_tier_limit_received(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        return
+    if not message.text.strip().isdigit():
+        await message.answer("❌ Faqat raqam kiriting!")
+        return
+
+    data = await state.get_data()
+    tier_id = data['tier_id']
+    new_limit = int(message.text.strip())
+
+    async with database.pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE pricing_tiers SET max_concurrent = $1 WHERE id = $2",
+            new_limit, tier_id
+        )
+        tier = await conn.fetchrow(
+            "SELECT * FROM pricing_tiers WHERE id = $1", tier_id
+        )
+
+    await state.clear()
+    await message.answer(
+        f"✅ <b>{tier['tier_name']}</b> tarifi concurrency limiti "
+        f"<b>{new_limit}</b> qilib yangilandi!",
+        reply_markup=admin_tier_detail_kb(tier_id),
+        parse_mode="HTML"
+    )
+
+
+# ═══════════════════════════════════════
 # SOZLAMALAR
 # ═══════════════════════════════════════
 
@@ -665,17 +792,17 @@ async def admin_settings_handler(callback: CallbackQuery):
     if not is_admin(callback.from_user.id):
         return
 
-    daily_price = await get_setting('daily_price') or '3000'
     trial_days = await get_setting('trial_days') or '7'
     referral_bonus = await get_setting('referral_bonus') or '5000'
     payment_card = await get_setting('payment_card') or 'Sozlanmagan'
 
     await callback.message.edit_text(
         f"⚙️ <b>Sozlamalar</b>\n\n"
-        f"💰 Kunlik narx: <b>{int(daily_price):,} so'm</b>\n"
         f"🎁 Trial davomiyligi: <b>{trial_days} kun</b>\n"
         f"🔗 Referral bonus: <b>{int(referral_bonus):,} so'm</b>\n"
-        f"💳 To'lov karta: <code>{payment_card}</code>",
+        f"💳 To'lov karta: <code>{payment_card}</code>\n\n"
+        f"ℹ️ Kunlik narxlar endi <b>💎 Tariflar</b> bo'limidan "
+        f"boshqariladi.",
         reply_markup=admin_settings_kb(),
         parse_mode="HTML"
     )
@@ -835,30 +962,11 @@ async def channel_name_received(message: Message, state: FSMContext):
 
 
 @router.message(AdminStates.waiting_channel_url)
-async def channel_url_received(message: Message, state: FSMContext, bot: Bot):
+async def channel_url_received(message: Message, state: FSMContext):
     if not is_admin(message.from_user.id):
         return
     data = await state.get_data()
     await state.clear()
-
-    # Bot shu kanalda admin ekanligini oldindan tekshirish —
-    # aks holda obuna tekshiruvi hech qachon ishlamaydi
-    warning = ""
-    try:
-        me = await bot.get_chat_member(data['channel_id'], bot.id)
-        if me.status not in ("administrator", "creator"):
-            warning = (
-                "\n\n⚠️ <b>Diqqat!</b> Bot bu kanalda hali <b>admin</b> emas. "
-                "Botni kanalga administrator qilib qo'shmasangiz, "
-                "obuna tekshiruvi ishlamaydi!"
-            )
-    except Exception as e:
-        warning = (
-            f"\n\n⚠️ <b>Diqqat!</b> Kanalni tekshirib bo'lmadi: <code>{e}</code>\n"
-            "Kanal ID noto'g'ri bo'lishi yoki bot hali kanalga umuman "
-            "qo'shilmagan bo'lishi mumkin. Botni kanalga administrator "
-            "qilib qo'shing va ID'ni tekshiring."
-        )
 
     async with database.pool.acquire() as conn:
         await conn.execute("""
@@ -871,8 +979,7 @@ async def channel_url_received(message: Message, state: FSMContext, bot: Bot):
     await message.answer(
         f"✅ Kanal qo'shildi!\n\n"
         f"📢 {data['channel_name']}\n"
-        f"🆔 {data['channel_id']}"
-        f"{warning}",
+        f"🆔 {data['channel_id']}",
         parse_mode="HTML"
     )
 
