@@ -96,8 +96,10 @@ async def can_create_bot(user_id: int) -> tuple[bool, str]:
         if trial_active and bots_count == 0:
             return True, "trial"
 
-        # Pullik — balans tekshirish
-        daily_price = int(await get_setting('daily_price') or 3000)
+        # Pullik — balans tekshirish (Standart tarif narxiga asosan)
+        from utils.usage import get_tier_for_request_count
+        standart_tier = await get_tier_for_request_count(0)
+        daily_price = standart_tier['daily_price']
         if user['balance'] >= daily_price:
             return True, "paid"
 
@@ -107,9 +109,11 @@ async def can_create_bot(user_id: int) -> tuple[bool, str]:
 async def process_daily_charges():
     """
     Har kecha ishlaydigan kunlik yechish.
-    Har faol bot uchun kunlik to'lov yechiladi.
+    Har faol bot uchun — kechagi so'rovlar soniga qarab aniqlangan
+    tarif (VIP daraja) bo'yicha kunlik to'lov yechiladi.
     """
-    daily_price = int(await get_setting('daily_price') or 3000)
+    from utils.usage import get_yesterday_request_count, get_tier_for_request_count
+    from webhook.bot_manager import update_bot_concurrency
 
     async with database.pool.acquire() as conn:
         # Barcha ishlaydigan botlarni olish
@@ -134,6 +138,14 @@ async def process_daily_charges():
             )
             if trial_active:
                 continue  # Trial davomida to'lov yo'q
+
+            # Kechagi so'rovlar soniga qarab tarifni aniqlash
+            yesterday_count = await get_yesterday_request_count(bot_id)
+            tier = await get_tier_for_request_count(yesterday_count)
+            daily_price = tier['daily_price']
+
+            # Bot ishlab turibdimi — concurrency limitini yangi tarifga moslash
+            update_bot_concurrency(bot_id, tier['max_concurrent'])
 
             # Balans tekshirish
             if bot['balance'] >= daily_price:
@@ -163,6 +175,8 @@ async def process_daily_charges():
                     'user_id': user_id,
                     'bot_username': bot['bot_username'],
                     'bot_id': bot_id,
+                    'tier': tier['tier_name'],
+                    'daily_price': daily_price,
                 })
 
         return stopped_bots
