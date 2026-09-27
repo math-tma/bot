@@ -17,6 +17,7 @@ TEMPLATE_NAMES = {
     "broadcaster": "📢 Avto xabar bot",
     "referral": "👥 Referral bot",
     "kinobot": "🎬 Kino bot",
+    "ai_agent": "🧠 AI Agent bot",
 }
 
 
@@ -80,11 +81,18 @@ async def bot_detail_handler(callback: CallbackQuery):
     template_name = TEMPLATE_NAMES.get(bot['template_type'], "Noma'lum")
     created = bot['created_at'].strftime('%d.%m.%Y')
 
+    from utils.usage import get_today_request_count, get_bot_current_tier
+    today_count = await get_today_request_count(bot_id)
+    tier = await get_bot_current_tier(bot_id)
+
     text = (
         f"🤖 <b>@{bot['bot_username'] or 'noma\'lum'}</b>\n\n"
         f"📦 Tur: {template_name}\n"
         f"📊 Holat: {status}\n"
-        f"📅 Yaratilgan: {created}\n"
+        f"📅 Yaratilgan: {created}\n\n"
+        f"💎 Joriy tarif: <b>{tier['tier_name']}</b>\n"
+        f"💰 Kunlik narx: <b>{tier['daily_price']:,} so'm</b>\n"
+        f"📈 Bugungi so'rovlar: <b>{today_count:,} ta</b>\n"
     )
 
     await callback.message.edit_text(
