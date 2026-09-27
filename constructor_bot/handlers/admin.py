@@ -52,6 +52,7 @@ def is_admin(user_id: int) -> bool:
 # ═══════════════════════════════════════
 
 @router.message(Command("admin"))
+@router.message(F.text == "⚙️ Admin panel")
 async def admin_panel(message: Message):
     if not is_admin(message.from_user.id):
         return
