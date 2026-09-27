@@ -350,6 +350,64 @@ async def create_tables():
             )
         """)
 
+        # ── BOT REQUEST STATS (VIP darajalash uchun kunlik so'rovlar hisobi) ──
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS bot_request_stats (
+                bot_id INTEGER REFERENCES bots(id) ON DELETE CASCADE,
+                stat_date DATE NOT NULL DEFAULT CURRENT_DATE,
+                request_count INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (bot_id, stat_date)
+            )
+        """)
+
+        # ── PRICING TIERS (VIP darajalar sozlamalari) ──
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS pricing_tiers (
+                id SERIAL PRIMARY KEY,
+                tier_name TEXT NOT NULL UNIQUE,
+                min_requests INTEGER NOT NULL,
+                max_requests INTEGER,
+                daily_price INTEGER NOT NULL,
+                max_concurrent INTEGER NOT NULL DEFAULT 10,
+                sort_order INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+
+        existing_tiers = await conn.fetchval("SELECT COUNT(*) FROM pricing_tiers")
+        if existing_tiers == 0:
+            await conn.execute("""
+                INSERT INTO pricing_tiers
+                    (tier_name, min_requests, max_requests, daily_price, max_concurrent, sort_order)
+                VALUES
+                    ('Standart', 0, 1000, 1000, 10, 1),
+                    ('O''sish', 1001, 5000, 2500, 20, 2),
+                    ('Biznes', 5001, 15000, 5000, 40, 3),
+                    ('VIP', 15001, NULL, 8000, 80, 4)
+            """)
+
+        # ── AI AGENT BOT ──
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS ai_agent_settings (
+                bot_id INTEGER PRIMARY KEY REFERENCES bots(id) ON DELETE CASCADE,
+                api_key TEXT NOT NULL,
+                system_prompt TEXT NOT NULL,
+                model TEXT NOT NULL DEFAULT 'claude-sonnet-5',
+                max_history INTEGER NOT NULL DEFAULT 10,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS ai_agent_messages (
+                id SERIAL PRIMARY KEY,
+                bot_id INTEGER REFERENCES bots(id) ON DELETE CASCADE,
+                user_id BIGINT NOT NULL,
+                role TEXT NOT NULL,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+
         print("✅ Barcha jadvallar yaratildi!")
 
 
