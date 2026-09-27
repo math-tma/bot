@@ -56,10 +56,17 @@ async def broadcast_message(bot: Bot, text: str, target: str = "all") -> dict:
 async def notify_stopped_bots(bot: Bot, stopped_bots: list):
     """Balansi tugagan foydalanuvchilarga xabar yuborish"""
     for item in stopped_bots:
+        price_line = ""
+        if item.get('daily_price'):
+            price_line = (
+                f"💵 Kerakli summa: {item['daily_price']:,} so'm/kun "
+                f"({item.get('tier', 'Standart')} tarif)\n"
+            )
         text = (
             f"⚠️ <b>Bot to'xtatildi!</b>\n\n"
             f"🤖 Bot: @{item.get('bot_username', 'noma\'lum')}\n"
-            f"📌 Sabab: Balansingiz tugadi\n\n"
+            f"📌 Sabab: Balansingiz tugadi\n"
+            f"{price_line}\n"
             f"💳 Balansni to'ldiring va bot avtomatik qayta ishga tushadi."
         )
         await notify_user(bot, item['user_id'], text, parse_mode="HTML")
