@@ -82,18 +82,18 @@ INSTRUCTIONS = {
         "Masalan: <code>001</code>, <code>batman</code>\n\n"
         "Davom etish uchun bot tokeningizni yuboring 👇"
     ),
-    "ai_agent": (
+   "ai_agent": (
         "🧠 <b>AI AGENT BOT — YO'RIQNOMA</b>\n\n"
         "1️⃣ Bot tokeningizni @BotFather dan oling\n"
         "2️⃣ Admin ID ni @userinfobot orqali bilib oling\n\n"
         "📋 <b>Bot ishlash tartibi:</b>\n"
-        "• Bot foydalanuvchilar bilan Claude AI orqali suhbatlashadi\n"
+        "• Bot foydalanuvchilar bilan Gemini AI orqali suhbatlashadi\n"
         "• Siz botning xarakterini (system prompt) o'zingiz yozasiz\n"
-        "• O'z Claude API kalitingiz kerak bo'ladi\n\n"
+        "• O'z Gemini API kalitingiz kerak bo'ladi\n\n"
         "⚠️ MUHIM: bot yaratilgach, botga <code>/admin</code> yuborib\n"
         "avval system promptni, keyin API kalitni kiritishingiz kerak.\n\n"
-        "🔑 API kalitni <a href='https://console.anthropic.com/settings/keys'>"
-        "console.anthropic.com</a> dan bepul olishingiz mumkin\n\n"
+        "🔑 API kalitni <a href='https://aistudio.google.com/app/apikey'>"
+        "aistudio.google.com</a> dan bepul olishingiz mumkin\n\n"
         "Davom etish uchun bot tokeningizni yuboring 👇"
     ),
 }
