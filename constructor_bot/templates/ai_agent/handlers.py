@@ -16,11 +16,11 @@ from templates.ai_agent.keyboards import (
 router = Router()
 logger = logging.getLogger(__name__)
 
-ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 MODEL_NAMES = {
-    "claude-haiku-4-5-20251001": "⚡ Haiku",
-    "claude-sonnet-5": "⚖️ Sonnet",
-    "claude-opus-5-5": "🧠 Opus",
+    "gemini-2.0-flash": "⚡ Flash (tez)",
+    "gemini-1.5-pro": "⚖️ Pro (muvozanatli)",
+    "gemini-1.5-flash": "💫 Flash 1.5 (arzon)",
 }
 
 
@@ -54,45 +54,85 @@ async def get_settings(bot_id: int) -> dict | None:
         return dict(row) if row else None
 
 
-async def call_claude(api_key: str, model: str, system_prompt: str, messages: list) -> str:
+async def call_gemini(api_key: str, model: str, system_prompt: str, messages: list) -> str:
     """
-    Claude API'ga so'rov yuboradi va matnli javobni qaytaradi.
+    Google Gemini API'ga so'rov yuboradi va matnli javobni qaytaradi.
     Xato bo'lsa, tushunarli xabar bilan Exception ko'taradi.
     """
+    # Gemini API formatiga o'girish: eski formatni yangi formatga
+    gemini_messages = []
+    
+    # System prompt'ni birinchi user xabari sifatida qo'shish
+    if system_prompt:
+        gemini_messages.append({
+            "role": "user",
+            "parts": [{"text": f"[SYSTEM INSTRUCTIONS]\n{system_prompt}\n\n[END SYSTEM]\n\nShunga amal qil."}]
+        })
+        gemini_messages.append({
+            "role": "model",
+            "parts": [{"text": "Tushundim. Sizning ko'rsatmalaringiz asosida javob beraman."}]
+        })
+    
+    # Suhbat tarixini qo'shish
+    for msg in messages:
+        role = "user" if msg["role"] == "user" else "model"
+        gemini_messages.append({
+            "role": role,
+            "parts": [{"text": msg["content"]}]
+        })
+
     headers = {
-        "x-api-key": api_key,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
+        "Content-Type": "application/json",
     }
+    
     payload = {
-        "model": model,
-        "max_tokens": 1024,
-        "system": system_prompt,
-        "messages": messages,
+        "contents": gemini_messages,
+        "generationConfig": {
+            "maxOutputTokens": 1024,
+            "temperature": 0.7,
+        }
     }
+    
+    url = f"{GEMINI_URL.format(model=model)}?key={api_key}"
 
     async with aiohttp.ClientSession() as session:
         async with session.post(
-            ANTHROPIC_URL, headers=headers, json=payload,
+            url, headers=headers, json=payload,
             timeout=aiohttp.ClientTimeout(total=60)
         ) as resp:
             data = await resp.json()
 
             if resp.status != 200:
-                error_type = data.get("error", {}).get("type", "")
                 error_msg = data.get("error", {}).get("message", "Noma'lum xato")
 
-                if resp.status == 401 or error_type == "authentication_error":
+                if resp.status == 401 or "API key" in error_msg:
                     raise ValueError("API kalit yaroqsiz yoki eskirgan")
                 elif resp.status == 429:
                     raise ValueError("So'rovlar chegarasiga yetildi (rate limit) — bir oz kutib qayta urinib ko'ring")
-                elif resp.status == 400 and "credit" in error_msg.lower():
-                    raise ValueError("Hisobingizda balans yetarli emas (Anthropic Console'da to'ldiring)")
+                elif resp.status == 400 and "quota" in error_msg.lower():
+                    raise ValueError("Hisobingizda balans yetarli emas (Google Cloud Console'da to'ldiring)")
+                elif resp.status == 400 and ("blocked" in error_msg.lower() or "safety" in error_msg.lower()):
+                    raise ValueError("Javob xavfsizlik sababli bloklandi. Boshqa savol bering.")
                 else:
                     raise ValueError(f"Xato: {error_msg}")
 
-            parts = [b.get("text", "") for b in data.get("content", []) if b.get("type") == "text"]
-            return "".join(parts).strip() or "..."
+            # Gemini API javobidan matnni chiqarish
+            try:
+                candidates = data.get("candidates", [])
+                if not candidates:
+                    return "Javob olib bo'lmadi. Qayta urinib ko'ring."
+                
+                content = candidates[0].get("content", {})
+                parts = content.get("parts", [])
+                
+                if not parts:
+                    return "Javob olib bo'lmadi. Qayta urinib ko'ring."
+                
+                text = parts[0].get("text", "...").strip()
+                return text if text else "..."
+            except (KeyError, IndexError, TypeError) as e:
+                logger.error(f"Gemini javobini parse qilishda xato: {e}, data: {data}")
+                return "Javobni to'liq olib bo'lmadi."
 
 
 async def get_conversation_history(bot_id: int, user_id: int, limit: int) -> list:
@@ -133,7 +173,7 @@ async def ai_start(message: Message, bot: Bot):
             await message.answer(
                 "👋 <b>AI Agent botga xush kelibsiz!</b>\n\n"
                 "⚠️ Bot hali sozlanmagan. Sozlash uchun /admin buyrug'ini yuboring — "
-                "avval Claude API kalitingizni, keyin bot qanday javob berishi "
+                "avval Google Gemini API kalitingizni, keyin bot qanday javob berishi "
                 "kerakligini (system prompt) kiritasiz.",
                 parse_mode="HTML"
             )
@@ -215,10 +255,9 @@ async def ai_prompt_received(message: Message, bot: Bot, state: FSMContext):
             await state.set_state(AiAgentStates.waiting_apikey)
             await message.answer(
                 "✅ Qabul qilindi!\n\n"
-                "🔑 Endi Claude API kalitingizni yuboring.\n\n"
-                "💡 Kalitni <a href='https://console.anthropic.com/settings/keys'>"
-                "console.anthropic.com</a> dan olishingiz mumkin — u "
-                "<code>sk-ant-...</code> bilan boshlanadi.",
+                "🔑 Endi Google Gemini API kalitingizni yuboring.\n\n"
+                "💡 Kalitni <a href='https://ai.google.dev/'>ai.google.dev</a> dan olishingiz mumkin — "
+                "<b>Get API Key</b> tugmasini bosing va bepul kalit oling.",
                 parse_mode="HTML",
                 disable_web_page_preview=True
             )
@@ -240,8 +279,8 @@ async def ai_apikey_view(callback: CallbackQuery, bot: Bot, state: FSMContext):
     await state.set_state(AiAgentStates.waiting_apikey)
     await callback.message.edit_text(
         f"🔑 <b>Joriy API kalit:</b> <code>{masked}</code>\n\n"
-        f"Yangi Claude API kalitni yuboring "
-        f"(<a href='https://console.anthropic.com/settings/keys'>console.anthropic.com</a> dan olinadi):",
+        f"Yangi Google Gemini API kalitni yuboring "
+        f"(<a href='https://ai.google.dev/'>ai.google.dev</a> dan olinadi):",
         reply_markup=back_admin_kb(),
         parse_mode="HTML",
         disable_web_page_preview=True
@@ -261,11 +300,12 @@ async def ai_apikey_received(message: Message, bot: Bot, state: FSMContext):
     except Exception:
         pass
 
-    if not api_key.startswith("sk-ant-"):
+    if len(api_key) < 20:
         await message.answer(
-            "❌ Bu Claude API kaliti ko'rinishiga o'xshamayapti "
-            "(<code>sk-ant-...</code> bilan boshlanishi kerak). Qayta yuboring:",
-            parse_mode="HTML"
+            "❌ Bu Gemini API kaliti ko'rinishiga o'xshamayapti. "
+            "Kalitni <a href='https://ai.google.dev/'>ai.google.dev</a> dan oling va qayta yuboring.",
+            parse_mode="HTML",
+            disable_web_page_preview=True
         )
         return
 
@@ -273,7 +313,7 @@ async def ai_apikey_received(message: Message, bot: Bot, state: FSMContext):
 
     # Kalitni tekshirish — juda qisqa test so'rovi bilan
     try:
-        await call_claude(api_key, "claude-haiku-4-5-20251001", "test", [{"role": "user", "content": "hi"}])
+        await call_gemini(api_key, "gemini-1.5-flash", "test", [{"role": "user", "content": "Hi"}])
     except ValueError as e:
         await status_msg.edit_text(f"❌ Kalit ishlamadi: {e}\n\nQayta yuboring:")
         return
@@ -321,9 +361,9 @@ async def ai_model_view(callback: CallbackQuery, bot: Bot):
 
     await callback.message.edit_text(
         f"🧠 <b>Joriy model:</b> {current}\n\n"
-        f"⚡ Haiku — eng tez va arzon, oddiy suhbat uchun\n"
-        f"⚖️ Sonnet — muvozanatli, ko'p vazifa uchun mos\n"
-        f"🧠 Opus — eng kuchli, murakkab vazifalar uchun (qimmatroq)\n\n"
+        f"⚡ Flash — eng tez va arzon, oddiy suhbat uchun\n"
+        f"⚖️ Pro — kuchli, murakkab vazifalar uchun mos\n"
+        f"💫 Flash 1.5 — eng yangi, tez va arzon (tavsiyalangan)\n\n"
         f"Tanlang:",
         reply_markup=model_select_kb(),
         parse_mode="HTML"
@@ -436,8 +476,8 @@ async def ai_chat(message: Message, bot: Bot):
     history.append({"role": "user", "content": message.text})
 
     try:
-        reply = await call_claude(
-            settings['api_key'], settings.get('model', 'claude-sonnet-5'),
+        reply = await call_gemini(
+            settings['api_key'], settings.get('model', 'gemini-1.5-flash'),
             settings['system_prompt'], history
         )
     except ValueError as e:
