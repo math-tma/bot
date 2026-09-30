@@ -19,9 +19,9 @@ def back_admin_kb() -> InlineKeyboardMarkup:
 
 def model_select_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⚡ Haiku (tez, arzon)", callback_data="ai_setmodel_claude-haiku-4-5-20251001")],
-        [InlineKeyboardButton(text="⚖️ Sonnet (muvozanatli)", callback_data="ai_setmodel_claude-sonnet-5")],
-        [InlineKeyboardButton(text="🧠 Opus (kuchli, qimmat)", callback_data="ai_setmodel_claude-opus-5-5")],
+        [InlineKeyboardButton(text="⚡ Flash (tez)", callback_data="ai_setmodel_gemini-2.0-flash")],
+        [InlineKeyboardButton(text="⚖️ Pro (kuchli)", callback_data="ai_setmodel_gemini-1.5-pro")],
+        [InlineKeyboardButton(text="💫 Flash 1.5 (arzon)", callback_data="ai_setmodel_gemini-1.5-flash")],
         [InlineKeyboardButton(text="◀️ Orqaga", callback_data="ai_admin")],
     ])
 
