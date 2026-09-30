@@ -997,3 +997,56 @@ async def admin_del_channel_handler(callback: CallbackQuery):
         )
     await callback.answer("✅ Kanal o'chirildi!", show_alert=True)
     await admin_channels_handler(callback)
+
+# ═══════════════════════════════════════
+# TASDIQLANGAN VA RAD ETILGAN TO'LOVLAR HISTORIYASI
+# ═══════════════════════════════════════
+
+@router.callback_query(F.data == "admin_payments_confirmed")
+async def show_confirmed_payments(call: CallbackQuery):
+    if not is_admin(call.from_user.id):
+        return
+    async with database.pool.acquire() as conn:
+        payments = await conn.fetch("""
+            SELECT p.id, p.amount, p.confirmed_at, u.full_name, u.user_id 
+            FROM payments p 
+            JOIN users u ON p.user_id = u.user_id 
+            WHERE p.status = 'confirmed' 
+            ORDER BY p.confirmed_at DESC LIMIT 20
+        """)
+        if not payments:
+            await call.answer("✅ Tasdiqlangan to'lovlar mavjud emas.", show_alert=True)
+            return
+
+        text = "<b>✅ Tasdiqlangan to'lovlar (oxirgi 20 ta):</b>\n\n"
+        for p in payments:
+            date_str = p['confirmed_at'].strftime('%d.%m.%Y %H:%M') if p['confirmed_at'] else '—'
+            text += f"💳 #{p['id']} | 👤 {p['full_name']} | 💰 {p['amount']:,} so'm | 📅 {date_str}\n"
+
+        await call.message.edit_text(text, reply_markup=admin_back_kb(), parse_mode="HTML")
+        await call.answer()
+
+
+@router.callback_query(F.data == "admin_payments_rejected")
+async def show_rejected_payments(call: CallbackQuery):
+    if not is_admin(call.from_user.id):
+        return
+    async with database.pool.acquire() as conn:
+        payments = await conn.fetch("""
+            SELECT p.id, p.amount, p.created_at, u.full_name, u.user_id 
+            FROM payments p 
+            JOIN users u ON p.user_id = u.user_id 
+            WHERE p.status = 'rejected' 
+            ORDER BY p.created_at DESC LIMIT 20
+        """)
+        if not payments:
+            await call.answer("❌ Rad etilgan to'lovlar mavjud emas.", show_alert=True)
+            return
+
+        text = "<b>❌ Rad etilgan to'lovlar (oxirgi 20 ta):</b>\n\n"
+        for p in payments:
+            date_str = p['created_at'].strftime('%d.%m.%Y %H:%M') if p['created_at'] else '—'
+            text += f"💳 #{p['id']} | 👤 {p['full_name']} | 💰 {p['amount']:,} so'm | 📅 {date_str}\n"
+
+        await call.message.edit_text(text, reply_markup=admin_back_kb(), parse_mode="HTML")
+        await call.answer()
