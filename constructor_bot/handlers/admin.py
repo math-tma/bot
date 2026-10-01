@@ -1050,3 +1050,31 @@ async def show_rejected_payments(call: CallbackQuery):
 
         await call.message.edit_text(text, reply_markup=admin_back_kb(), parse_mode="HTML")
         await call.answer()
+
+@router.callback_query(F.data == "admin_users_banned")
+async def admin_users_banned_handler(callback: CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+ 
+    async with database.pool.acquire() as conn:
+        users = await conn.fetch("""
+            SELECT user_id, username, full_name, balance
+            FROM users WHERE is_banned = TRUE
+            ORDER BY created_at DESC LIMIT 20
+        """)
+ 
+    if not users:
+        await callback.answer("Banlangan foydalanuvchi yo'q", show_alert=True)
+        return
+ 
+    lines = [
+        f"🚫 <b>{u['full_name']}</b> | <code>{u['user_id']}</code>"
+        for u in users
+    ]
+ 
+    await callback.message.edit_text(
+        f"🚫 <b>Banlangan foydalanuvchilar:</b>\n\n" + "\n".join(lines),
+        reply_markup=admin_users_kb(),
+        parse_mode="HTML"
+    )
+    await callback.answer()
